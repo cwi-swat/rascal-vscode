@@ -14,16 +14,15 @@ package org.rascalmpl.vscode.lsp.rascal;
 
 import static org.rascalmpl.vscode.lsp.util.EvaluatorUtil.makeFutureEvaluator;
 import static org.rascalmpl.vscode.lsp.util.EvaluatorUtil.runEvaluator;
-
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -38,14 +37,14 @@ import org.rascalmpl.parser.uptr.action.NoActionExecutor;
 import org.rascalmpl.values.IRascalValueFactory;
 import org.rascalmpl.values.parsetrees.ITree;
 import org.rascalmpl.values.parsetrees.TreeAdapter;
+import org.rascalmpl.vscode.lsp.RascalTextEdit;
 import org.rascalmpl.vscode.lsp.util.concurrent.InterruptibleFuture;
-
 import io.usethesource.vallang.IConstructor;
 import io.usethesource.vallang.IList;
-import io.usethesource.vallang.INode;
 import io.usethesource.vallang.ISet;
 import io.usethesource.vallang.ISourceLocation;
 import io.usethesource.vallang.IString;
+import io.usethesource.vallang.ITuple;
 import io.usethesource.vallang.IValueFactory;
 
 public class RascalLanguageServices {
@@ -150,4 +149,14 @@ public class RascalLanguageServices {
         return new RascalParser().parse(Parser.START_MODULE, loc.getURI(), input, actions,
             new DefaultNodeFlattener<>(), new UPTRNodeFactory(true));
     }
+
+    public InterruptibleFuture<List<RascalTextEdit>> calculateRename(ISourceLocation pos, String newName, PathConfig projectPath) {
+        return runEvaluator("rename", compilerEvaluator, e -> (IList) e.call("renameSymbol", pos, VF.string(newName), projectPath.asConstructor(), VF.set()), VF.list(), exec)
+            .thenApply(l -> l.stream()
+                .map(ITuple.class::cast)
+                .map(t -> new RascalTextEdit((ISourceLocation)t.get(0), (IString)t.get(1)))
+                .collect(Collectors.toList())
+            );
+    }
+
 }

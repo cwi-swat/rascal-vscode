@@ -13,14 +13,16 @@
 package org.rascalmpl.vscode.lsp.util.locations;
 
 import java.net.URISyntaxException;
-
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextDocumentItem;
 import org.rascalmpl.uri.URIUtil;
-
+import org.rascalmpl.values.ValueFactoryFactory;
+import org.rascalmpl.values.parsetrees.ITree;
+import org.rascalmpl.values.parsetrees.TreeAdapter;
 import io.usethesource.vallang.ISourceLocation;
 
 public class Locations {
@@ -57,6 +59,17 @@ public class Locations {
 
     public static Position toPosition(int line, int column, LineColumnOffsetMap map, boolean atEnd) {
         return new Position(line, map.translateColumn(line, column, atEnd));
+    }
+
+    public static @Nullable ISourceLocation findPositionInTree(ITree tree, ISourceLocation sloc, Position pos, ColumnMaps cm) {
+        int rascalLine = pos.getLine() + 1;
+        int rascalColumn = cm.get(sloc).reverseColumn(rascalLine, pos.getCharacter(), false);
+        ITree lexical = TreeAdapter.locateLexical(tree, rascalLine, rascalColumn);
+        if (lexical != null) {
+            return TreeAdapter.getLocation(lexical);
+        }
+        return null;
+
     }
 
 }
